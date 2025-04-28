@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: DynamoDB table for storing user bus route subscriptions.
+
+Resources:
+  TransportDataStreamTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: TransportDataStream
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: bus_route
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        - AttributeName: bus_route
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
