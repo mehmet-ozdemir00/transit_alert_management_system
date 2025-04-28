@@ -1,0 +1,42 @@
+# ─── Python ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+
+# Virtual environment
+server/venv/
+
+# Environment variables
+server/.env
+client/.env
+.env.*
+
+# Log files
+*.log
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Lambda deployment bundles
+*.zip
+
+# ─── AWS/Serverless ───────────────────────────────────────
+.aws-sam/
+.serverless/
+
+# ─── IDEs/Editors ─────────────────────────────────────────
+.idea/
+.vscode/
+
+# ─── OS/System ────────────────────────────────────────────
+.DS_Store
+*.local
+
+# ─── Frontend (client/) ───────────────────────────────────
+client/node_modules/
+client/dist/
+client/build/
+
+# ─── Test/Reports ─────────────────────────────────────────
+coverage/
