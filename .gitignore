@@ -19,6 +19,7 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Lambda deployment bundles
+server/deployment/ServiceLambda.zip
 *.zip
 
 # ─── AWS/Serverless ───────────────────────────────────────
