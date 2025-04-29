@@ -3,6 +3,9 @@ Description: An AWS Lambda application that processes public transit alerts.
 
 Resources:
 
+# LambdaExecutionRole grants necessary permissions for the Lambda function to interact with AWS services.
+# It allows Lambda to access DynamoDB for CRUD operations on the TransitAlertData table.
+# Enables Lambda to invoke API Gateway and publish notifications via SNS.
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -41,6 +44,9 @@ Resources:
                   - sns:Publish
                 Resource: "*"
 
+# MyCognitoUserPool defines a user pool for authenticating users in the TransitAlert service.
+# Auto-verifies email addresses for new users.
+# Enforces a strong password policy (minimum length, uppercase, numbers, symbols).
   MyCognitoUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -54,6 +60,10 @@ Resources:
           RequireNumbers: true
           RequireSymbols: true
 
+# MyCognitoUserPoolClient configures the client application for interacting with the Cognito user pool.
+# The client is linked to the user pool created above.
+# Allows user authentication using password-based login (USER_PASSWORD_AUTH) and admin login (ADMIN_NO_SRP_AUTH).
+# Does not generate a secret for the client (GenerateSecret: false).
   MyCognitoUserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
@@ -64,12 +74,19 @@ Resources:
         - ADMIN_NO_SRP_AUTH
         - USER_PASSWORD_AUTH
 
+# MyApiGateway creates a REST API for handling public transit alert operations.
+# Defines the name and description for the API.
+# This API will serve as the entry point for all client requests (subscribe, update, unsubscribe, etc.).
   MyApiGateway:
     Type: AWS::ApiGateway::RestApi
     Properties:
       Name: "TransitAlertServiceAPI"
       Description: "API for handling public transit alert operations"
 
+# MyCognitoAuthorizer configures Cognito as the authorization mechanism for the API.
+# Uses the Cognito User Pool to authenticate users based on the Authorization header in API requests.
+# Ensures that only authenticated users with a valid token can access the API methods.
+# Links the authorizer to the API Gateway defined above.
   MyCognitoAuthorizer:
     Type: AWS::ApiGateway::Authorizer
     Properties:
@@ -80,6 +97,9 @@ Resources:
       ProviderARNs:
         - !GetAtt MyCognitoUserPool.Arn
 
+# Lambda function to process transit alerts and subscriptions using Python 3.11.
+# Links function to IAM role for required permissions and environment variables.
+# Specifies deployment package location (S3 bucket and key).
   MyTransitLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -95,9 +115,10 @@ Resources:
           TABLE_NAME: TransportDataStream
       Code:
         S3Bucket: transit-alert-management-system-artifacts
-        S3Key: ServiceLambda.zip
+        S3Key: lambda_deployment.zip
 
   # API Resources & Methods
+  # Subscribe Resources
   SubscribeResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -142,6 +163,7 @@ Resources:
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Allow-Origin: true
 
+# Update Resources
   UpdateResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -186,6 +208,7 @@ Resources:
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Allow-Origin: true
 
+# Unsubscribe Resource
   UnsubscribeResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -230,6 +253,7 @@ Resources:
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Allow-Origin: true
 
+# Status Resource
   StatusResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -274,6 +298,97 @@ Resources:
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Allow-Origin: true
 
+# Prediction Resource
+  PredictionResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MyApiGateway
+      ParentId: !GetAtt MyApiGateway.RootResourceId
+      PathPart: "prediction"
+  
+  PredictionMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref MyCognitoAuthorizer
+      HttpMethod: GET
+      ResourceId: !Ref PredictionResource
+      RestApiId: !Ref MyApiGateway
+      Integration:
+        IntegrationHttpMethod: GET
+        Type: AWS_PROXY
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
+  
+  PredictionOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      ResourceId: !Ref PredictionResource
+      RestApiId: !Ref MyApiGateway
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+# Delay Resource
+  DelayResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MyApiGateway
+      ParentId: !GetAtt MyApiGateway.RootResourceId
+      PathPart: "delay"
+  
+  DelayMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref MyCognitoAuthorizer
+      HttpMethod: GET
+      ResourceId: !Ref DelayResource
+      RestApiId: !Ref MyApiGateway
+      Integration:
+        IntegrationHttpMethod: GET
+        Type: AWS_PROXY
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
+  
+  DelayOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      ResourceId: !Ref DelayResource
+      RestApiId: !Ref MyApiGateway  
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+# API Gateway Deployment
   MyApiDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
@@ -285,10 +400,18 @@ Resources:
       - UpdateOptionsMethod
       - UnsubscribeOptionsMethod
       - StatusOptionsMethod
+      - PredictionMethod
+      - PredictionOptionsMethod
+      - DelayMethod
+      - DelayOptionsMethod
     Properties:
       RestApiId: !Ref MyApiGateway
       StageName: dev
 
+# Grants API Gateway permission to invoke the Lambda function.
+# The permission is restricted to requests from the specified API Gateway.
+# Applied for the 'dev' stage of the API.
+# This ensures that only the API Gateway can trigger the Lambda function.
   ApiGatewayInvokePermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -297,6 +420,7 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${MyApiGateway}/dev/*"
 
+# Outputs the Lambda function name, API Gateway URL, and Cognito User Pool details.
 Outputs:
   LambdaFunctionName:
     Description: "Lambda function name"

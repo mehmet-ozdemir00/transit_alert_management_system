@@ -11,42 +11,18 @@ from jose import jwt
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# This class handles the Lambda function for the Transit Alert Management System.
-# It includes methods for subscribing, unsubscribing, updating email,
-# and checking the status of user subscriptions.
-# It also includes validation methods for user input and JWT token extraction.
-# The class is initialized with the necessary environment variables,
-# including SNS topic ARN, DynamoDB table name, and other configuration settings.
-# The main method is the lambda_handler, which processes incoming requests
-# based on the HTTP method (POST, PUT, DELETE, GET).
-# The lambda_handler method is the entry point for the Lambda function.
-# It handles the request, validates input, interacts with the TransitAlertSystem,
-# and returns appropriate responses.
-# The class also includes error handling for various scenarios,
-# including invalid input, authorization errors, and unexpected exceptions.
-# The responses are formatted in a consistent manner for API Gateway integration.
-# The class uses AWS SDK (boto3) for interacting with AWS services,
-# including SNS for notifications and DynamoDB for data storage.
-# The class is designed to be used in a serverless environment, such as AWS Lambda,
-# and is structured to handle incoming requests and responses in a consistent manner.
-# The class is designed to be reusable and modular,
-# allowing for easy integration with other components of the system.
-# The class is also designed to be extensible,
-# allowing for future enhancements and additional features as needed.
-# The class is designed to be efficient and performant,
-# ensuring that it can handle a large number of requests and subscriptions.
-# The class is designed to be secure,
-# ensuring that sensitive information is handled appropriately
-# and that user data is protected.
-# The class is designed to be maintainable,
-# ensuring that it is easy to understand and modify as needed.
-# The class is designed to be testable,
-# ensuring that it can be easily unit tested and integrated into a larger testing framework.
-# The class is designed to be compliant with best practices and standards,
-# ensuring that it adheres to industry standards and guidelines for security, performance, and reliability.
-# The class is designed to be user-friendly,
-# ensuring that it provides clear and informative error messages
-# and that it is easy to use for developers and users alike.
+# This class handles the AWS Lambda function that serves as the entry point for the API.
+# It processes incoming requests, validates input, and interacts with the TransitAlertSystem
+# and TransportDataService classes to perform various operations such as subscribing users,
+# updating email addresses, deleting subscriptions, and checking vehicle delays.
+# It also handles error responses and returns appropriate HTTP status codes and messages.
+# The class is designed to be reusable and can be easily extended
+# to include additional functionality as needed.
+# The class uses the boto3 library to interact with AWS services such as SNS and DynamoDB.
+# The class also includes methods for validating user input,
+# extracting user IDs from JWT tokens, and formatting responses for the API.
+# The class is designed to be used in a serverless environment,
+# where it can be triggered by AWS Lambda functions.
 
 class LambdaFunctionService:
     @staticmethod
@@ -114,12 +90,27 @@ class LambdaFunctionService:
             )
 
             user_id = LambdaFunctionService.get_user_id_from_jwt(event)
-
             http_method = event.get("httpMethod", "").upper()
             path = event.get("path", "").lower()
-            body = json.loads(event.get("body", "{}"))
-            route = body.get("route")
-            stop_id = body.get("stop_id")
+
+            valid_routes = {
+                ("POST", "/subscribe"),
+                ("PUT", "/email"),
+                ("DELETE", "/subscription"),
+                ("DELETE", "/unsubscribe"),
+                ("GET", "/status"),
+                ("GET", "/prediction"),
+                ("GET", "/delay"),
+            }
+
+            if (http_method, path) not in valid_routes:
+                return LambdaFunctionService.response(405, {"error": f"Method {http_method} with path {path} not allowed"})
+
+            body = json.loads(event.get("body", "{}")) if event.get("body") else {}
+            query_params = event.get("queryStringParameters", {}) or {}
+
+            route = body.get("route") or query_params.get("route")
+            stop_id = body.get("stop_id") or query_params.get("stop_id")
             new_email = body.get("email")
 
             if http_method == "POST" and path == "/subscribe":
@@ -127,12 +118,15 @@ class LambdaFunctionService:
                 error = LambdaFunctionService.validate_user_route_stop(user_id, route, stop_id)
                 if error:
                     return LambdaFunctionService.response(400, {"error": error})
+
                 if not alert_system.check_subscription_limit(user_id):
                     return LambdaFunctionService.response(403, {"error": "Subscription limit reached."})
-                alert_system.add_subscription(user_id, route, stop_id)
+
                 error = LambdaFunctionService.validate_email(new_email)
                 if error:
                     return LambdaFunctionService.response(400, {"error": error})
+
+                alert_system.add_subscription(user_id, route, stop_id)
                 result = alert_system.subscribe_user_to_sns(new_email, user_id)
                 if result:
                     return LambdaFunctionService.response(200, {"message": "Subscription request sent. Please confirm your email."})
@@ -144,9 +138,11 @@ class LambdaFunctionService:
                 error = LambdaFunctionService.validate_user_only(user_id)
                 if error:
                     return LambdaFunctionService.response(400, {"error": error})
+
                 error = LambdaFunctionService.validate_email(new_email)
                 if error:
                     return LambdaFunctionService.response(400, {"error": error})
+
                 alert_system.update_subscription_email(user_id, new_email)
                 return LambdaFunctionService.response(200, {"message": "Email updated successfully."})
 
@@ -155,6 +151,7 @@ class LambdaFunctionService:
                 error = LambdaFunctionService.validate_user_route_stop(user_id, route, stop_id)
                 if error:
                     return LambdaFunctionService.response(400, {"error": error})
+
                 alert_system.delete_subscription(user_id, route, stop_id)
                 return LambdaFunctionService.response(200, {"message": "Subscription removed successfully."})
 
@@ -163,27 +160,51 @@ class LambdaFunctionService:
                 error = LambdaFunctionService.validate_user_only(user_id)
                 if error:
                     return LambdaFunctionService.response(400, {"error": error})
+
                 alert_system.unsubscribe_user_from_sns(user_id)
-                return LambdaFunctionService.response(200, {"message": "Unsubscribed from SNS successfully."})
+                return LambdaFunctionService.response(200, {"message": "Unsubscribed and goodbye email sent!"})
 
             elif http_method == "GET" and path == "/status":
                 logger.info("Processing GET /status")
                 error = LambdaFunctionService.validate_user_only(user_id)
                 if error:
                     return LambdaFunctionService.response(400, {"error": error})
+
                 subs = data_service.get_user_subscriptions(user_id)
                 email = data_service.get_user_email(user_id)
                 return LambdaFunctionService.response(200, {
-                    "user_id": user_id,
                     "subscriptions": subs,
                     "email": email
                 })
 
-            return LambdaFunctionService.response(405, {"error": f"Method {http_method} with path {path} not allowed"})
+            elif http_method == "GET" and path == "/prediction":
+                logger.info("Processing GET /prediction")
+                route = query_params.get("route")
+                stop_id = query_params.get("stop_id")
+
+                if not route or not stop_id:
+                    return LambdaFunctionService.response(400, {"error": "Missing route or stop_id in query parameters"})
+
+                prediction = alert_system.get_prediction(route, stop_id)
+                if prediction:
+                    return LambdaFunctionService.response(200, prediction)
+                else:
+                    return LambdaFunctionService.response(404, {"message": "No prediction data available"})
+
+            elif http_method == "GET" and path == "/delay":
+                logger.info("Processing GET /delay")
+                route = query_params.get("route")
+
+                if not route:
+                    return LambdaFunctionService.response(400, {"error": "Missing route in query parameters"})
+
+                alert_system.check_vehicle_delay(route)
+                return LambdaFunctionService.response(200, {"message": f"Checked vehicle delay for route {route}"})
 
         except ValueError as e:
             logger.error(f"Authorization error: {e}")
             return LambdaFunctionService.response(401, {"error": str(e)})
+
         except Exception as e:
             logger.exception("An unexpected error occurred")
             return LambdaFunctionService.response(500, {"message": "Internal server error", "error": str(e)})
