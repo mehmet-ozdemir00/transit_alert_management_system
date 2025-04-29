@@ -66,13 +66,14 @@ class TransitAlertSystem:
 
                 for activity in vehicle_data:
                     progress_status = activity.get("MonitoredVehicleJourney", {}).get("ProgressStatus", "")
-                    if "delayed" in progress_status.lower():
+                    delay_minutes = activity.get("MonitoredVehicleJourney", {}).get("Delay", 0) // 60  # delay in minutes
+                    if "delayed" in progress_status.lower() and delay_minutes >= self.vehicle_delay_threshold:
                         delayed_buses.append(progress_status)
 
                 if delayed_buses:
                     self.logger.warning(f"Vehicle delay detected on route {route}")
                     self.send_notification(
-                        f"Bus route {route} has vehicles experiencing delays.",
+                        f"Bus route {route} has vehicles experiencing delays of more than {self.vehicle_delay_threshold} minutes.",
                         subject="Vehicle Delay Alert"
                     )
                 else:
@@ -177,6 +178,12 @@ class TransitAlertSystem:
             subscription_arn = response.get("SubscriptionArn")
             if subscription_arn and subscription_arn != 'pending confirmation':
                 self.data_service.store_subscription_arn(user_id, subscription_arn)
+                self.send_notification(
+                    "Thank you for subscribing to Transit Alerts! Please confirm your email subscription to start receiving alerts.",
+                    subject="Subscription Confirmation"
+                )
+            else:
+                self.logger.info(f"User {email} subscription pending confirmation")
             return response
         except Exception as e:
             self.logger.error(f"Error subscribing user {email}: {e}")

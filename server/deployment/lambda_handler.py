@@ -78,6 +78,8 @@ class LambdaFunctionService:
             vehicle_delay_threshold = int(os.environ.get("VEHICLE_DELAY_THRESHOLD", "5"))
             dynamodb_table_name = os.environ["DYNAMODB_TABLE_NAME"]
             max_subscriptions = int(os.environ.get("MAX_SUBSCRIPTIONS", "5"))
+            max_retries = int(os.environ.get("MAX_RETRIES", "3"))
+            retry_delay = int(os.environ.get("RETRY_DELAY", "5"))
 
             data_service = TransportDataService(dynamodb_table_name)
             alert_system = TransitAlertSystem(
@@ -86,7 +88,9 @@ class LambdaFunctionService:
                 delay_threshold_minutes=delay_threshold_minutes,
                 vehicle_delay_threshold=vehicle_delay_threshold,
                 data_service=data_service,
-                max_subscriptions=max_subscriptions
+                max_subscriptions=max_subscriptions,
+                max_retries=max_retries,
+                retry_delay=retry_delay
             )
 
             user_id = LambdaFunctionService.get_user_id_from_jwt(event)
