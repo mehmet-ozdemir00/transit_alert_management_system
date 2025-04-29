@@ -14,11 +14,12 @@ A real-time tracking and notification system for public transit. Built using AWS
 
 # 🧱 Tech Stack
 
-# Frontend (client/)
+Frontend (client/)
 HTML/CSS/JavaScript
 Interacts with the backend through API Gateway
 
-# Backend (server/)
+
+Backend (server/)
 AWS Lambda (Python)
 API Gateway
 DynamoDB (for storing user data and subscription logs)
@@ -44,6 +45,7 @@ Cognito (for user authentication)
  All endpoints are protected via Amazon API Gateway and secured with Cognito authorizers.
 
 
+
 # 🔒 Security
 
 All sensitive data is stored securely in DynamoDB and Lambda environment variables.
@@ -57,6 +59,7 @@ AWS Cognito is used for secure user login and authentication.
 Permission is granted, free of charge, to use, copy, modify, and distribute this Software, provided that the original copyright and permission notice are included.
 
 The above copyright notice and this permission notice must be included in all copies or substantial portions of the Software.
+
 
 
 # 📜 DISCLAIMER
