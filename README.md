@@ -5,24 +5,35 @@ A real-time tracking and notification system for public transit. Built using AWS
 # 🚀 Features
 
 ☑️ 🚌 Real-time bus tracking with live data from public transport APIs
+
 ☑️ 🔔 Personalized notifications for transit delays or route changes
+
 ☑️ 🧑‍🤝‍🧑 User registration and authentication via AWS Cognito
+
 ☑️ ✉️ Email alerts for subscribed users (via AWS SNS)
+
 ☑️ 🌐 API endpoints for managing subscriptions, status checks, and email updates
+
 ☑️ 🛠 Serverless architecture for scalability and low-cost operation.
 
 
 # 🧱 Tech Stack
 
-Frontend (client/)
+**Frontend (client/)**  
 ☑️ HTML/CSS/JavaScript
+
 ☑️ Interacts with the backend through API Gateway
 
-Backend (server/)
+
+**Backend (server/)**  
 ☑️ AWS Lambda (Python)
+
 ☑️ API Gateway
+
 ☑️ DynamoDB (for storing user data and subscription logs)
+
 ☑️ SNS (for email notifications)
+
 ☑️ Cognito (for user authentication)
 
 
