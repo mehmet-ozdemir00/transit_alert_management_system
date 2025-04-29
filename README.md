@@ -1,8 +1,8 @@
-🚍 Public Transport Tracking & Alert System
+# 🚍 Public Transport Tracking & Alert System
 A real-time tracking and notification system for public transit. Built using AWS services like Lambda, API Gateway, DynamoDB, SNS, and Cognito.
 
 
-🚀 Features
+# 🚀 Features
 
 🚌 Real-time bus tracking with live data from public transport APIs
 🔔 Personalized notifications for transit delays or route changes
@@ -12,13 +12,13 @@ A real-time tracking and notification system for public transit. Built using AWS
 🛠 Serverless architecture for scalability and low-cost operation.
 
 
-🧱 Tech Stack
+# 🧱 Tech Stack
 
-Frontend (client/)
+# Frontend (client/)
 HTML/CSS/JavaScript
 Interacts with the backend through API Gateway
 
-Backend (server/)
+# Backend (server/)
 AWS Lambda (Python)
 API Gateway
 DynamoDB (for storing user data and subscription logs)
@@ -26,33 +26,7 @@ SNS (for email notifications)
 Cognito (for user authentication)
 
 
-🗂 Project Structure
-
-# TRANSIT_ALERT_MANAGEMENT_SYSTEM
- └── client/    
- └── server/    
-         ├── .venv  
-         ├── application/
-                    ├── data_services/
-                          └── transport_data_stream.py 
-                    ├── handlers/
-                          └── lambda_handler.py 
-                    ├── services/
-                          └── transit_alert_system.py 
-         ├── cloudformation/
-              ├── lambda_function.yaml 
-              └── dynamodb_table.yaml 
-         ├── deployment/
-              ├── lambda_deployment.zip 
-              ├── lambda_handler.py
-              ├── transit_alert_system.py
-              ├── transport_data_stream.py
-         ├── scripts/ 
- └── .gitignore
- └── README.md
-
-
-🚏 API Endpoints
+# 🚏 API Endpoints
 
 | Method | Endpoint                  | Description                                  |
 |--------|---------------------------|----------------------------------------------|
@@ -65,11 +39,12 @@ Cognito (for user authentication)
 | OPTIONS| /subscribe, /update,      | CORS support for API calls                   |          
 |        |  /unsubscribe, /status,   |                                              |
 |        |  /prediction, /delay      |                                              |
-|------------------------------------|----------------------------------------------|
+
 
  All endpoints are protected via Amazon API Gateway and secured with Cognito authorizers.
 
-🔒 Security
+
+# 🔒 Security
 
 All sensitive data is stored securely in DynamoDB and Lambda environment variables.
 No credentials are stored in the codebase.
@@ -77,7 +52,14 @@ All endpoints are served over HTTPS via API Gateway.
 AWS Cognito is used for secure user login and authentication.
 
 
-📜 DISCLAIMER
+# 📄 License
+
+Permission is granted, free of charge, to use, copy, modify, and distribute this Software, provided that the original copyright and permission notice are included.
+
+The above copyright notice and this permission notice must be included in all copies or substantial portions of the Software.
+
+
+# 📜 DISCLAIMER
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
