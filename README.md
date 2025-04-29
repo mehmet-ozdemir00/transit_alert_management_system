@@ -4,27 +4,26 @@ A real-time tracking and notification system for public transit. Built using AWS
 
 # 🚀 Features
 
-🚌 Real-time bus tracking with live data from public transport APIs
-🔔 Personalized notifications for transit delays or route changes
-🧑‍🤝‍🧑 User registration and authentication via AWS Cognito
-✉️ Email alerts for subscribed users (via AWS SNS)
-🌐 API endpoints for managing subscriptions, status checks, and email updates
-🛠 Serverless architecture for scalability and low-cost operation.
+☑️ 🚌 Real-time bus tracking with live data from public transport APIs
+☑️ 🔔 Personalized notifications for transit delays or route changes
+☑️ 🧑‍🤝‍🧑 User registration and authentication via AWS Cognito
+☑️ ✉️ Email alerts for subscribed users (via AWS SNS)
+☑️ 🌐 API endpoints for managing subscriptions, status checks, and email updates
+☑️ 🛠 Serverless architecture for scalability and low-cost operation.
 
 
 # 🧱 Tech Stack
 
 Frontend (client/)
-HTML/CSS/JavaScript
-Interacts with the backend through API Gateway
-
+☑️ HTML/CSS/JavaScript
+☑️ Interacts with the backend through API Gateway
 
 Backend (server/)
-AWS Lambda (Python)
-API Gateway
-DynamoDB (for storing user data and subscription logs)
-SNS (for email notifications)
-Cognito (for user authentication)
+☑️ AWS Lambda (Python)
+☑️ API Gateway
+☑️ DynamoDB (for storing user data and subscription logs)
+☑️ SNS (for email notifications)
+☑️ Cognito (for user authentication)
 
 
 # 🚏 API Endpoints
@@ -45,7 +44,6 @@ Cognito (for user authentication)
  All endpoints are protected via Amazon API Gateway and secured with Cognito authorizers.
 
 
-
 # 🔒 Security
 
 All sensitive data is stored securely in DynamoDB and Lambda environment variables.
@@ -59,7 +57,6 @@ AWS Cognito is used for secure user login and authentication.
 Permission is granted, free of charge, to use, copy, modify, and distribute this Software, provided that the original copyright and permission notice are included.
 
 The above copyright notice and this permission notice must be included in all copies or substantial portions of the Software.
-
 
 
 # 📜 DISCLAIMER
