@@ -23,18 +23,19 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - dynamodb:PutItem
-                  - dynamodb:GetItem
-                  - dynamodb:UpdateItem
+                  - dynamodb:Query
                   - dynamodb:Scan
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
                   - dynamodb:DeleteItem
-                Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/TransitAlertData
+                  - dynamodb:UpdateItem
+                Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/TransportDataStream
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: arn:aws:logs:*:*:*
+                Resource: "*"
               - Effect: Allow
                 Action:
                   - execute-api:Invoke
@@ -42,7 +43,18 @@ Resources:
               - Effect: Allow
                 Action:
                   - sns:Publish
-                Resource: "*"
+                  - sns:Subscribe
+                  - sns:Unsubscribe
+                  - sns:ListSubscriptions
+                  - sns:GetSubscriptionAttributes
+                  - sns:ListSubscriptionsByTopic
+                Resource: !Ref TransitAlertTopic
+
+# TransitAlertTopic creates an SNS topic for publishing transit alerts.
+  TransitAlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: TransitAlertTopic
 
 # MyCognitoUserPool defines a user pool for authenticating users in the TransitAlert service.
 # Auto-verifies email addresses for new users.
@@ -112,7 +124,18 @@ Resources:
       Timeout: 240
       Environment:
         Variables:
-          TABLE_NAME: TransportDataStream
+          ENV: dev
+          DYNAMODB_TABLE_NAME: TransportDataStream
+          COGNITO_USER_POOL_ID: !Ref MyCognitoUserPool
+          COGNITO_USER_POOL_CLIENT_ID: !Ref MyCognitoUserPoolClient
+          COGNITO_REGION: !Ref AWS::Region
+          SNS_TOPIC_ARN: !Ref TransitAlertTopic
+          MTA_API_KEY: cf61841d-d775-4832-b96b-2e24ae75c7fb
+          DELAY_THRESHOLD_MINUTES: "4"
+          VEHICLE_DELAY_THRESHOLD: "5"
+          MAX_SUBSCRIPTIONS: "5"
+          MAX_RETRIES: "3"
+          RETRY_DELAY: "5"
       Code:
         S3Bucket: transit-alert-management-system-artifacts
         S3Key: lambda_deployment.zip
@@ -235,6 +258,51 @@ Resources:
       AuthorizationType: NONE
       HttpMethod: OPTIONS
       ResourceId: !Ref UnsubscribeResource
+      RestApiId: !Ref MyApiGateway
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'DELETE,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+# Subscription Resource
+  SubscriptionResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MyApiGateway
+      ParentId: !GetAtt MyApiGateway.RootResourceId
+      PathPart: "subscription"
+
+  SubscriptionMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref MyCognitoAuthorizer
+      HttpMethod: DELETE
+      ResourceId: !Ref SubscriptionResource
+      RestApiId: !Ref MyApiGateway
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
+  
+  SubscriptionOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      ResourceId: !Ref SubscriptionResource
       RestApiId: !Ref MyApiGateway
       Integration:
         Type: MOCK
@@ -388,6 +456,51 @@ Resources:
             method.response.header.Access-Control-Allow-Methods: true
             method.response.header.Access-Control-Allow-Origin: true
 
+# Cancelled Resource
+  CancelledResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MyApiGateway
+      ParentId: !GetAtt MyApiGateway.RootResourceId
+      PathPart: "cancelled"
+  
+  CancelledMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref MyCognitoAuthorizer
+      HttpMethod: GET
+      ResourceId: !Ref CancelledResource
+      RestApiId: !Ref MyApiGateway
+      Integration:
+        IntegrationHttpMethod: GET
+        Type: AWS_PROXY
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
+  
+  CancelledOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      ResourceId: !Ref CancelledResource
+      RestApiId: !Ref MyApiGateway  
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
 # API Gateway Deployment
   MyApiDeployment:
     Type: AWS::ApiGateway::Deployment
@@ -404,6 +517,8 @@ Resources:
       - PredictionOptionsMethod
       - DelayMethod
       - DelayOptionsMethod
+      - CancelledMethod
+      - CancelledOptionsMethod
     Properties:
       RestApiId: !Ref MyApiGateway
       StageName: dev
