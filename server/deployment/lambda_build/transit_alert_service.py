@@ -42,8 +42,8 @@ class TransitAlertSystem:
                 attributes = self.sns_client.get_subscription_attributes(
                     SubscriptionArn=existing_arn
                 ).get('Attributes', {})
-                # If the subscription is confirmed, return
-                if attributes.get("SubscriptionStatus", "").lower() == "confirmed":
+
+                if existing_arn and existing_arn != "PendingConfirmation":
                     self.logger.info(f"User {user_id} already confirmed for route {bus_route}")
                     return True
 
@@ -55,7 +55,7 @@ class TransitAlertSystem:
                 ReturnSubscriptionArn=True
             )
             arn = response.get("SubscriptionArn")
-            status = "pending" if arn and arn != "pending confirmation" else "pending"
+            status = "confirmed" if arn and arn != "PendingConfirmation" else "pending"
 
             self.data_service.save_subscription_record(
                 user_id=user_id,
@@ -114,8 +114,8 @@ class TransitAlertSystem:
             # # 🔽 Testing the delay and trigger SNS email!!!
             # delay_minutes = self.delay_threshold_minutes + 5
             # self.send_notification(
-            #     f"[TEST] Simulated Delay Alert: Route {route} is delayed by {delay_minutes:.2f} minutes.",
-            #     subject=f"[TEST] Delay Alert: {route}"
+                # f"⚠️ [TEST] 🚍 Route {route} is experiencing a delay of **{delay_minutes:.2f} minutes**. Please plan accordingly.",
+                # subject=f"⚠️ [TEST] Delay Alert: Route {route}"
             # )
 
             # Iterate over vehicle data and check delay for each stop
@@ -294,7 +294,6 @@ class TransitAlertSystem:
         except Exception as e:
             self.logger.error(f"Error checking if route {route} is cancelled: {e}")
             return False
-        
     
     # Get all cancelled routes
     def get_cancelled_routes(self):

@@ -8,7 +8,7 @@ TEMPLATE_PATH="cloudformation/lambda_function.yaml"
 S3_BUCKET="transit-alert-management-system-artifacts"
 S3_KEY="lambda_deployment.zip"
 
-echo "🚧  Cleaning and rebuilding deployment package..."
+echo "🚧 Cleaning and rebuilding deployment package..."
 rm -rf deployment/lambda_build
 mkdir -p deployment/lambda_build
 
@@ -23,10 +23,10 @@ cd deployment/lambda_build || exit 1
 zip -r ../lambda_deployment.zip .
 cd ../..
 
-echo " ☁️    Uploading lambda_deployment.zip to S3..."
+echo " ☁️  Uploading lambda_deployment.zip to S3..."
 aws s3 cp deployment/lambda_deployment.zip "s3://$S3_BUCKET/$S3_KEY"
 
-echo " 📦  Creating CloudFormation stack: $STACK_NAME ..."
+echo " 📦 Creating CloudFormation stack: $STACK_NAME ..."
 aws cloudformation create-stack \
     --stack-name "$STACK_NAME" \
     --template-body "file://$TEMPLATE_PATH" \

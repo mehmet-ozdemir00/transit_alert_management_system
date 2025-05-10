@@ -1,6 +1,20 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: An AWS Lambda application that processes public transit alerts.
 
+Parameters:
+  ExistingCognitoUserPoolId:
+    Type: String
+    Description: The ID of the existing Cognito User Pool
+
+  ExistingCognitoUserPoolClientId:
+    Type: String
+    Description: The App Client ID of the existing Cognito User Pool
+
+  ExistingCognitoUserPoolArn:
+    Type: String
+    Description: The ARN of the existing Cognito User Pool
+
+
 Resources:
 
 # LambdaExecutionRole grants necessary permissions for the Lambda function to interact with AWS services.
@@ -50,41 +64,10 @@ Resources:
                   - sns:ListSubscriptionsByTopic
                 Resource: !Ref TransitAlertTopic
 
-# TransitAlertTopic creates an SNS topic for publishing transit alerts.
   TransitAlertTopic:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: TransitAlertTopic
-
-# MyCognitoUserPool defines a user pool for authenticating users in the TransitAlert service.
-# Auto-verifies email addresses for new users.
-# Enforces a strong password policy (minimum length, uppercase, numbers, symbols).
-  MyCognitoUserPool:
-    Type: AWS::Cognito::UserPool
-    Properties:
-      UserPoolName: "TransitAlertUserPool"
-      AutoVerifiedAttributes:
-        - email
-      Policies:
-        PasswordPolicy:
-          MinimumLength: 8
-          RequireUppercase: true
-          RequireNumbers: true
-          RequireSymbols: true
-
-# MyCognitoUserPoolClient configures the client application for interacting with the Cognito user pool.
-# The client is linked to the user pool created above.
-# Allows user authentication using password-based login (USER_PASSWORD_AUTH) and admin login (ADMIN_NO_SRP_AUTH).
-# Does not generate a secret for the client (GenerateSecret: false).
-  MyCognitoUserPoolClient:
-    Type: AWS::Cognito::UserPoolClient
-    Properties:
-      ClientName: "TransitAlertUserPoolClient"
-      UserPoolId: !Ref MyCognitoUserPool
-      GenerateSecret: false
-      ExplicitAuthFlows:
-        - ADMIN_NO_SRP_AUTH
-        - USER_PASSWORD_AUTH
 
 # MyApiGateway creates a REST API for handling public transit alert operations.
 # Defines the name and description for the API.
@@ -107,7 +90,7 @@ Resources:
       IdentitySource: "method.request.header.Authorization"
       RestApiId: !Ref MyApiGateway
       ProviderARNs:
-        - !GetAtt MyCognitoUserPool.Arn
+        - !Ref ExistingCognitoUserPoolArn
 
 # Lambda function to process transit alerts and subscriptions using Python 3.11.
 # Links function to IAM role for required permissions and environment variables.
@@ -126,8 +109,8 @@ Resources:
         Variables:
           ENV: dev
           DYNAMODB_TABLE_NAME: TransportDataStream
-          COGNITO_USER_POOL_ID: !Ref MyCognitoUserPool
-          COGNITO_USER_POOL_CLIENT_ID: !Ref MyCognitoUserPoolClient
+          COGNITO_USER_POOL_ID: !Ref ExistingCognitoUserPoolId
+          COGNITO_USER_POOL_CLIENT_ID: !Ref ExistingCognitoUserPoolClientId
           COGNITO_REGION: !Ref AWS::Region
           SNS_TOPIC_ARN: !Ref TransitAlertTopic
           MTA_API_KEY: cf61841d-d775-4832-b96b-2e24ae75c7fb
@@ -547,8 +530,8 @@ Outputs:
 
   CognitoUserPoolId:
     Description: "Cognito User Pool ID"
-    Value: !Ref MyCognitoUserPool
+    Value: !Ref ExistingCognitoUserPoolId
 
   CognitoUserPoolClientId:
     Description: "Cognito User Pool Client ID"
-    Value: !Ref MyCognitoUserPoolClient
+    Value: !Ref ExistingCognitoUserPoolClientId

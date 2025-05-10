@@ -15,7 +15,7 @@ cp application/lambda_handler.py deployment/lambda_build/
 cp application/transit_alert_service.py deployment/lambda_build/
 cp application/transport_data_stream.py deployment/lambda_build/
 
-echo "🗜️  Creating deployment ZIP package..."
+echo "🗜️ Creating deployment ZIP package..."
 rm -f deployment/lambda_deployment.zip
 cd deployment/lambda_build || exit 1
 zip -r ../lambda_deployment.zip .
